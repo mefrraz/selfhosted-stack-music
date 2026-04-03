@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mefrraz/selfhosted-stack-music</title>
+<meta name="description" content="A personal, high-fidelity music infrastructure — fully self-hosted and Docker-ready. Navidrome + Deemix + LRCGET + Radio automation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --bg2: #10101c;
+    --bg3: #17172a;
+    --surface: #1a1a2e;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7c6af7;
+    --accent2: #c084fc;
+    --accent3: #34d399;
+    --accent4: #60a5fa;
+    --warn: #fbbf24;
+    --text: #e8e8f2;
+    --muted: #64647e;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 2.5rem;
+    background: rgba(8,8,16,0.9);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 0.5rem;
+    transition: color 0.2s;
+  }
+  .nav-logo:hover { color: var(--text); }
+  .nav-logo .repo { color: var(--accent); }
+  .nav-logo .slash { color: var(--muted); opacity: 0.4; }
+
+  .nav-links { display: flex; gap: 1.75rem; list-style: none; align-items: center; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 0.8rem; font-family: var(--mono);
+    letter-spacing: 0.04em; transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-gh {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text) !important;
+    font-size: 0.78rem !important;
+    transition: border-color 0.2s, background 0.2s !important;
+  }
+  .nav-gh:hover { border-color: var(--accent) !important; background: var(--bg3) !important; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 8rem 2rem 5rem;
+    position: relative; overflow: hidden;
+  }
+
+  /* animated grid bg */
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.055) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 20%, transparent 100%);
+    animation: gridDrift 20s linear infinite;
+  }
+  @keyframes gridDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 56px 56px; }
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px; height: 500px;
+    background: radial-gradient(ellipse, rgba(124,106,247,0.13) 0%, transparent 70%);
+    top: 30%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .hero-glow2 {
+    position: absolute;
+    width: 400px; height: 300px;
+    background: radial-gradient(ellipse, rgba(52,211,153,0.07) 0%, transparent 70%);
+    top: 60%; left: 60%;
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent3);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.15s;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: '';
+    display: block; width: 30px; height: 1px;
+    background: var(--accent3); opacity: 0.4;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.8rem, 7.5vw, 6rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    margin-bottom: 0.4rem;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.3s;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(130deg, var(--accent) 20%, var(--accent2) 80%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-repo {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.45s;
+  }
+  .hero-repo a { color: var(--accent4); text-decoration: none; }
+  .hero-repo a:hover { text-decoration: underline; }
+
+  .hero-sub {
+    max-width: 520px;
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.55s;
+  }
+
+  .hero-ctas {
+    display: flex; gap: 0.85rem; flex-wrap: wrap; justify-content: center;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.7s;
+  }
+
+  .btn {
+    padding: 0.7rem 1.6rem;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    transition: all 0.2s;
+    border: none; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,106,247,0.3); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+  .hero-pills {
+    display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: center;
+    margin-top: 3.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.9s;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.28rem 0.8rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  }
+  .pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+  .scroll-hint {
+    position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    font-family: var(--mono); font-size: 0.62rem; color: var(--muted);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    opacity: 0; animation: fadeUp 0.5s ease forwards 1.2s;
+    text-decoration: none;
+  }
+  .scroll-line {
+    width: 1px; height: 36px;
+    background: linear-gradient(to bottom, transparent, var(--accent));
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.2} 50%{opacity:1} }
+
+  /* ── SHARED SECTION STYLES ── */
+  .section-wrap { max-width: 1080px; margin: 0 auto; padding: 6rem 2rem; }
+
+  .s-label {
+    font-family: var(--mono); font-size: 0.68rem;
+    color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+    font-weight: 800; letter-spacing: -0.025em; margin-bottom: 0.85rem;
+  }
+
+  .s-sub { color: var(--muted); max-width: 480px; margin-bottom: 3rem; font-size: 0.95rem; }
+
+  .divider { height: 1px; background: var(--border); }
+
+  /* ── STACK ── */
+  .stack { display: flex; flex-direction: column; }
+
+  .layer {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--border); border-bottom: none;
+    background: var(--bg2);
+    transition: background 0.2s;
+    cursor: default;
+  }
+  .layer:first-child { border-radius: 10px 10px 0 0; }
+  .layer:last-child  { border-bottom: 1px solid var(--border); border-radius: 0 0 10px 10px; }
+  .layer:hover { background: var(--bg3); }
+
+  .layer-bar { width: 3px; flex-shrink: 0; border-radius: 2px 0 0 2px; }
+  .layer-body { padding: 1.3rem 1.6rem; flex: 1; }
+  .layer-name { font-family: var(--mono); font-size: 0.88rem; font-weight: 700; margin-bottom: 0.2rem; }
+  .layer-desc { font-size: 0.855rem; color: var(--muted); }
+  .layer-port {
+    font-family: var(--mono); font-size: 0.67rem;
+    padding: 0.22rem 0.6rem; border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--muted); align-self: center; margin-right: 1.25rem; flex-shrink: 0;
+  }
+
+  /* ── FEATURES ── */
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 1.1rem; }
+  .feat {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.6rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feat:hover { border-color: rgba(124,106,247,0.4); transform: translateY(-3px); }
+  .feat-ico { font-size: 1.6rem; margin-bottom: 0.85rem; }
+  .feat h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .feat p { font-size: 0.845rem; color: var(--muted); }
+
+  /* ── DOCS ── */
+  .docs-wrap { display: grid; grid-template-columns: 210px 1fr; gap: 2rem; align-items: start; }
+
+  .docs-sidebar {
+    position: sticky; top: 5rem;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.2rem;
+  }
+  .docs-sidebar-title {
+    font-family: var(--mono); font-size: 0.65rem;
+    color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 0.85rem;
+  }
+  .docs-sidebar ul { list-style: none; display: flex; flex-direction: column; gap: 0.1rem; }
+  .docs-sidebar a {
+    display: block; padding: 0.42rem 0.7rem; border-radius: 5px;
+    font-size: 0.79rem; color: var(--muted);
+    text-decoration: none; transition: all 0.15s; font-family: var(--mono);
+  }
+  .docs-sidebar a:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .docs-sidebar a.active { background: rgba(124,106,247,0.12); color: var(--accent); }
+
+  .docs-sections { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .doc-block {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.85rem;
+    scroll-margin-top: 5rem;
+  }
+  .doc-block h3 {
+    font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.55rem;
+  }
+  .doc-block p { font-size: 0.875rem; color: var(--muted); margin-bottom: 0.85rem; }
+  .doc-block p:last-child { margin-bottom: 0; }
+  .doc-block ul { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; margin: 0.65rem 0; }
+  .doc-block li { font-size: 0.855rem; color: var(--muted); padding-left: 1.1rem; position: relative; }
+  .doc-block li::before { content:'→'; position:absolute; left:0; color:var(--accent); font-size:0.72rem; top:0.1rem; }
+  .doc-block strong { color: var(--text); font-weight: 600; }
+
+  pre {
+    background: #09090f;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 1.1rem 1.35rem;
+    overflow-x: auto;
+    margin: 0.85rem 0;
+  }
+  code { font-family: var(--mono); font-size: 0.78rem; line-height: 1.75; color: #a5b4fc; }
+  .cm { color: #2e2e50; }
+  .ck { color: var(--accent3); }
+  .cv { color: #fbbf24; }
+  .cs { color: #f9a8d4; }
+
+  .warn {
+    display: flex; gap: 0.7rem;
+    background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.18);
+    border-radius: 7px; padding: 0.9rem 1.1rem;
+    font-size: 0.835rem; color: var(--warn); margin: 0.85rem 0;
+  }
+
+  .env-tbl { width: 100%; border-collapse: collapse; font-size: 0.815rem; margin: 0.85rem 0; }
+  .env-tbl th {
+    font-family: var(--mono); font-size: 0.67rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    text-align: left; padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .env-tbl td { padding: 0.65rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--muted); }
+  .env-tbl td:first-child { font-family: var(--mono); font-size: 0.76rem; color: var(--accent3); }
+  .env-tbl tr:last-child td { border-bottom: none; }
+
+  .proxy-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.85rem; margin: 0.85rem 0; }
+  .proxy-card {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.1rem;
+    text-decoration: none; transition: border-color 0.2s;
+  }
+  .proxy-card:hover { border-color: rgba(124,106,247,0.4); }
+  .proxy-name { font-weight: 700; font-size: 0.875rem; color: var(--text); margin-bottom: 0.3rem; }
+  .proxy-desc { font-size: 0.775rem; color: var(--muted); }
+
+  /* ── LANG ── */
+  .lang-switch {
+    display: flex; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  }
+  .lbtn {
+    padding: 0.32rem 0.8rem; cursor: pointer;
+    color: var(--muted); background: transparent; border: none;
+    font-family: var(--mono); font-size: 0.73rem; transition: all 0.18s;
+  }
+  .lbtn.on { background: var(--accent); color: #fff; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 2.5rem;
+    max-width: 1080px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+  }
+  footer a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  footer a:hover { color: var(--accent); }
+  .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(18px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    nav { padding: 0.9rem 1.25rem; }
+    .nav-links { display: none; }
+    .docs-wrap { grid-template-columns: 1fr; }
+    .docs-sidebar { position: static; }
+    .proxy-row { grid-template-columns: 1fr; }
+    .section-wrap { padding: 4rem 1.25rem; }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#hero">
+    <span>mefrraz</span><span class="slash">/</span><span class="repo">selfhosted-stack-music</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#docs">Docs</a></li>
+    <li><a href="https://github.com/mefrraz/selfhosted-stack-music" target="_blank" class="nav-gh">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/></svg>
+      GitHub
+    </a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <p class="hero-eyebrow">Self-Hosted Music Infrastructure</p>
+
+  <h1>Your music.<br><em>Your rules.</em></h1>
+
+  <p class="hero-repo">
+    <a href="https://github.com/mefrraz/selfhosted-stack-music" target="_blank">github.com/mefrraz/selfhosted-stack-music</a>
+  </p>
+
+  <p class="hero-sub">
+    A Docker-based personal music stack with automated acquisition, synchronized lyrics, and high-fidelity streaming — no cloud required.
+  </p>
+
+  <div class="hero-ctas">
+    <a href="#docs" class="btn btn-primary">📖 Read the docs</a>
+    <a href="https://github.com/mefrraz/selfhosted-stack-music" target="_blank" class="btn btn-outline">⭐ Star on GitHub</a>
+  </div>
+
+  <div class="hero-pills">
+    <span class="pill"><span class="pill-dot" style="background:#a5b4fc"></span>Navidrome</span>
+    <span class="pill"><span class="pill-dot" style="background:#93c5fd"></span>Deemix</span>
+    <span class="pill"><span class="pill-dot" style="background:#6ee7b7"></span>LRCGET</span>
+    <span class="pill"><span class="pill-dot" style="background:#d8b4fe"></span>Radio Automation</span>
+    <span class="pill"><span class="pill-dot" style="background:#2496ED"></span>Docker</span>
+    <span class="pill"><span class="pill-dot" style="background:#34d399"></span>FLAC / MP3</span>
+  </div>
+
+  <a class="scroll-hint" href="#stack">scroll<div class="scroll-line"></div></a>
+</div>
+
+<div class="divider"></div>
+
+<!-- STACK -->
+<div class="section-wrap" id="stack">
+  <p class="s-label">// Architecture</p>
+  <h2>The Stack</h2>
+  <p class="s-sub">Four focused components that work seamlessly together — each doing one thing well.</p>
+
+  <div class="stack">
+    <div class="layer">
+      <div class="layer-bar" style="background:var(--accent)"></div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:#a5b4fc">Navidrome</div>
+        <div class="layer-desc">Core music server — Subsonic API, library indexing, themes, multi-library (v0.58+), plugins. Your personal Spotify.</div>
+      </div>
+      <div class="layer-port">:4533</div>
+    </div>
+    <div class="layer">
+      <div class="layer-bar" style="background:var(--accent4)"></div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:#93c5fd">Deemix (Bambanah)</div>
+        <div class="layer-desc">Audio acquisition engine. Downloads FLAC/MP3 with full ID3v2 tagging. Spotify public playlist fallback. v3.13.6.</div>
+      </div>
+      <div class="layer-port">:6595</div>
+    </div>
+    <div class="layer">
+      <div class="layer-bar" style="background:var(--accent3)"></div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:#6ee7b7">LRCGET</div>
+        <div class="layer-desc">Official LRCLIB client. Mass-downloads synced LRC lyrics and embeds them directly into audio file tags (ID3v2). No .lrc files.</div>
+      </div>
+      <div class="layer-port">desktop</div>
+    </div>
+    <div class="layer">
+      <div class="layer-bar" style="background:var(--accent2)"></div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:#d8b4fe">navidrome-radio.py</div>
+        <div class="layer-desc">Python script using Radio-Browser API. Injects stations directly into navidrome.db SQLite — no container restart needed.</div>
+      </div>
+      <div class="layer-port">navidrome.db</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<div class="section-wrap" id="features">
+  <p class="s-label">// Why this stack</p>
+  <h2>Features</h2>
+  <p class="s-sub">Everything for a production-grade personal music server — nothing you don't need.</p>
+
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="feat-ico">🎧</div>
+      <h3>Stream Everywhere</h3>
+      <p>Subsonic API works with Feishin, Substreamer, Navic, Amperfy, and dozens more — on every platform.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">📥</div>
+      <h3>Automated Acquisition</h3>
+      <p>Deemix downloads FLAC or MP3 with perfect metadata. Spotify public playlist fallback included in v3.13.x.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">🎤</div>
+      <h3>Synced Lyrics</h3>
+      <p>LRCGET embeds LRC lyrics into audio tags — no external files, no extra Navidrome configuration.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">📻</div>
+      <h3>Radio Stations</h3>
+      <p>Add stations from Radio-Browser by name, genre or country. Duplicate detection and pagination included.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">🐳</div>
+      <h3>Docker Native</h3>
+      <p>Runs anywhere Docker runs. File ownership handled automatically via PUID/PGID environment variables.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">🔒</div>
+      <h3>HTTPS Ready</h3>
+      <p>Works with Nginx Proxy Manager, Traefik, or Caddy. Supports externalized auth via reverse proxy.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">📚</div>
+      <h3>Multi-Library</h3>
+      <p>Navidrome v0.58+ supports separate collections (music, audiobooks) with per-user access controls.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">🎨</div>
+      <h3>Themes & Plugins</h3>
+      <p>Dracula, Nord, AMusic, SquiddiesGlass and more. Plugin system introduced in latest Navidrome releases.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- DOCS -->
+<div class="section-wrap" id="docs">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2.75rem;">
+    <div>
+      <p class="s-label">// Documentation</p>
+      <h2>Full Setup Guide</h2>
+      <p class="s-sub" style="margin-bottom:0">Everything you need to go from zero to streaming.</p>
+    </div>
+    <div class="lang-switch">
+      <button class="lbtn on" onclick="setLang('en')">🇬🇧 EN</button>
+      <button class="lbtn" onclick="setLang('pt')">🇵🇹 PT</button>
+    </div>
+  </div>
+
+  <div class="docs-wrap">
+    <div class="docs-sidebar">
+      <div class="docs-sidebar-title">On this page</div>
+      <ul>
+        <li><a href="#d-pre" class="active">Prerequisites</a></li>
+        <li><a href="#d-arl">ARL Token</a></li>
+        <li><a href="#d-compose">Docker Compose</a></li>
+        <li><a href="#d-env">Env Variables</a></li>
+        <li><a href="#d-navidrome">Navidrome</a></li>
+        <li><a href="#d-deemix">Deemix</a></li>
+        <li><a href="#d-lrcget">LRCGET</a></li>
+        <li><a href="#d-radio">Radio Script</a></li>
+        <li><a href="#d-proxy">Reverse Proxy</a></li>
+      </ul>
+    </div>
+
+    <div class="docs-sections">
+
+      <div class="doc-block" id="d-pre">
+        <h3>📋 <span class="en">Prerequisites</span><span class="pt" hidden>Pré-requisitos</span></h3>
+        <ul>
+          <li class="en">Docker &amp; Docker Compose installed on your host</li>
+          <li class="pt" hidden>Docker e Docker Compose instalados no servidor</li>
+          <li class="en">A Deezer account (needed for the ARL token)</li>
+          <li class="pt" hidden>Conta no Deezer (necessária para o token ARL)</li>
+          <li class="en">Ports <code>4533</code> (Navidrome) and <code>6595</code> (Deemix) available</li>
+          <li class="pt" hidden>Portas <code>4533</code> (Navidrome) e <code>6595</code> (Deemix) disponíveis</li>
+          <li class="en">A domain or local DNS for remote HTTPS access</li>
+          <li class="pt" hidden>Domínio ou DNS local para acesso HTTPS remoto</li>
+        </ul>
+      </div>
+
+      <div class="doc-block" id="d-arl">
+        <h3>🔑 <span class="en">Get Your Deezer ARL Token</span><span class="pt" hidden>Obtém o Token ARL do Deezer</span></h3>
+        <p class="en">The ARL cookie authenticates Deemix with your Deezer account. It's required before starting the stack.</p>
+        <p class="pt" hidden>O cookie ARL autentica o Deemix com a tua conta Deezer. É obrigatório antes de iniciar a stack.</p>
+        <ul>
+          <li class="en">Login to <strong>Deezer</strong> on a desktop browser</li>
+          <li class="pt" hidden>Faz login no <strong>Deezer</strong> num browser desktop</li>
+          <li class="en">Open DevTools: <code>F12</code> → <strong>Application</strong> → <strong>Cookies</strong> → <code>deezer.com</code></li>
+          <li class="pt" hidden>Abre DevTools: <code>F12</code> → <strong>Application</strong> → <strong>Cookies</strong> → <code>deezer.com</code></li>
+          <li class="en">Copy the value of the <code>arl</code> cookie and paste it into Deemix settings</li>
+          <li class="pt" hidden>Copia o valor do cookie <code>arl</code> e cola-o nas definições do Deemix</li>
+        </ul>
+        <div class="warn">⚠️ &nbsp;<span class="en">Keep your ARL token private — it grants full access to your Deezer account.</span><span class="pt" hidden>Guarda o token ARL em segredo — dá acesso total à tua conta Deezer.</span></div>
+      </div>
+
+      <div class="doc-block" id="d-compose">
+        <h3>🐳 Docker Compose</h3>
+        <p class="en">Minimal setup to get Navidrome and Deemix running:</p>
+        <p class="pt" hidden>Setup mínimo para correr o Navidrome e o Deemix:</p>
+<pre><code><span class="cm"># docker-compose.yml</span>
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    ports: ["<span class="cv">4533</span>:4533"]
+    volumes:
+      - ./data/navidrome:/data
+      - ./music:/music:ro
+    environment:
+      <span class="ck">ND_LOGLEVEL</span>: <span class="cs">info</span>
+      <span class="ck">ND_UI_VAMP_THEME</span>: <span class="cs">dark</span>
+
+  deemix:
+    image: ghcr.io/bambanah/deemix:latest
+    ports: ["<span class="cv">6595</span>:6595"]
+    volumes:
+      - ./music:/downloads
+      - ./data/deemix:/config
+    environment:
+      <span class="ck">PUID</span>: <span class="cv">1000</span>
+      <span class="ck">PGID</span>: <span class="cv">1000</span>
+      <span class="ck">UMASK_SET</span>: <span class="cv">022</span></code></pre>
+<pre><code><span class="cm"># Start the stack</span>
+docker compose up -d</code></pre>
+      </div>
+
+      <div class="doc-block" id="d-env">
+        <h3>⚙️ <span class="en">Environment Variables</span><span class="pt" hidden>Variáveis de Ambiente</span></h3>
+        <table class="env-tbl">
+          <thead><tr>
+            <th>Variable</th><th>Service</th>
+            <th class="en">Description</th><th class="pt" hidden>Descrição</th>
+            <th>Default</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>PUID</td><td>Deemix</td><td class="en">Host User ID — file ownership</td><td class="pt" hidden>ID do utilizador — posse de ficheiros</td><td>1000</td></tr>
+            <tr><td>PGID</td><td>Deemix</td><td class="en">Host Group ID — file ownership</td><td class="pt" hidden>ID do grupo — posse de ficheiros</td><td>1000</td></tr>
+            <tr><td>UMASK_SET</td><td>Deemix</td><td class="en">File permission mask</td><td class="pt" hidden>Máscara de permissões</td><td>022</td></tr>
+            <tr><td>ND_LOGLEVEL</td><td>Navidrome</td><td class="en">Log verbosity (info / debug)</td><td class="pt" hidden>Nível de log (info / debug)</td><td>info</td></tr>
+            <tr><td>ND_UI_VAMP_THEME</td><td>Navidrome</td><td class="en">Default UI theme</td><td class="pt" hidden>Tema padrão da interface</td><td>dark</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-block" id="d-navidrome">
+        <h3 style="color:#a5b4fc">🟣 Navidrome</h3>
+        <p class="en">Open-source music server written in Go — your personal Spotify. Handles library indexing and exposes the Subsonic API.</p>
+        <p class="pt" hidden>Servidor de música open-source escrito em Go — o teu Spotify pessoal. Gere a indexação da biblioteca e expõe a API Subsonic.</p>
+        <p class="en"><strong>Notable features (v0.58+):</strong> Multi-library support, Scrobble History, Instant Mix via Last.fm or Deezer, plugin system.</p>
+        <p class="pt" hidden><strong>Funcionalidades notáveis (v0.58+):</strong> Suporte multi-biblioteca, Scrobble History, Instant Mix via Last.fm ou Deezer, sistema de plugins.</p>
+        <p class="en"><strong>Recommended clients:</strong></p>
+        <p class="pt" hidden><strong>Clientes recomendados:</strong></p>
+        <ul>
+          <li><strong>Feishin</strong> — <span class="en">Desktop (Windows / macOS / Linux) · React + Electron</span><span class="pt" hidden>Desktop (Windows / macOS / Linux) · React + Electron</span></li>
+          <li><strong>Substreamer</strong> — iOS &amp; Android</li>
+          <li><strong>Navic</strong> — <span class="en">Modern iOS/Android client · zero telemetry</span><span class="pt" hidden>Cliente moderno iOS/Android · zero telemetria</span></li>
+        </ul>
+      </div>
+
+      <div class="doc-block" id="d-deemix">
+        <h3 style="color:#93c5fd">🔵 Deemix (Bambanah)</h3>
+        <p class="en">Actively maintained Docker-optimized fork of Deemix. Downloads FLAC or MP3 with complete ID3v2 metadata. Current version: <code>3.13.6</code>.</p>
+        <p class="pt" hidden>Fork do Deemix ativamente mantido e otimizado para Docker. Descarrega FLAC ou MP3 com metadados ID3v2 completos. Versão atual: <code>3.13.6</code>.</p>
+        <div class="warn">⚠️ &nbsp;<span class="en">Disable the built-in lyrics download — it's unstable. Use LRCGET for reliable lyric embedding.</span><span class="pt" hidden>Desativa o download de letras nativo — é instável. Usa o LRCGET para embutir letras de forma fiável.</span></div>
+        <p class="en"><strong>Spotify fallback (v3.13.x):</strong> When a public Spotify playlist returns 404, Deemix now parses track IDs from the public page and resolves them individually.</p>
+        <p class="pt" hidden><strong>Fallback Spotify (v3.13.x):</strong> Quando uma playlist pública do Spotify devolve 404, o Deemix agora analisa os IDs da página pública e resolve-os individualmente.</p>
+<pre><code><span class="cm"># Pull standalone</span>
+docker run -d --name Deemix \
+  -v /path/to/music:/downloads \
+  -v /path/to/config:/config \
+  -p <span class="cv">6595</span>:6595 \
+  ghcr.io/bambanah/deemix:latest</code></pre>
+      </div>
+
+      <div class="doc-block" id="d-lrcget">
+        <h3 style="color:#6ee7b7">🟢 LRCGET</h3>
+        <p class="en">The official desktop client for LRCLIB — the largest open, community-built lyrics database. Scans your library and embeds synchronized LRC lyrics into audio tags.</p>
+        <p class="pt" hidden>O cliente oficial do LRCLIB — a maior base de dados de letras open-source. Analisa a biblioteca e embute letras LRC sincronizadas nas tags dos ficheiros de áudio.</p>
+        <ul>
+          <li class="en">Set mode to <strong>Embed lyrics into audio files</strong> (ID3v2) — not external .lrc</li>
+          <li class="pt" hidden>Define o modo para <strong>Embutir letras nos ficheiros de áudio</strong> (ID3v2) — não .lrc externos</li>
+          <li class="en">Supports custom self-hosted LRCLIB instances</li>
+          <li class="pt" hidden>Suporta instâncias LRCLIB personalizadas (self-hosted)</li>
+          <li class="en">Cross-platform: Windows, macOS, Linux — written in Rust</li>
+          <li class="pt" hidden>Multi-plataforma: Windows, macOS, Linux — escrito em Rust</li>
+          <li class="en">Navidrome detects embedded lyrics automatically — zero extra config</li>
+          <li class="pt" hidden>O Navidrome deteta letras embutidas automaticamente — sem configuração extra</li>
+        </ul>
+      </div>
+
+      <div class="doc-block" id="d-radio">
+        <h3 style="color:#d8b4fe">🟣 <span class="en">Radio Automation</span><span class="pt" hidden>Automação de Rádios</span></h3>
+        <p class="en"><code>navidrome-radio.py</code> uses the Radio-Browser API to inject radio stations directly into the <code>navidrome.db</code> SQLite database — no container restart required.</p>
+        <p class="pt" hidden>O <code>navidrome-radio.py</code> usa a API Radio-Browser para injetar estações de rádio diretamente na base de dados SQLite <code>navidrome.db</code> — sem reinício do contentor.</p>
+        <ul>
+          <li class="en">Search by name (e.g. <code>Comercial</code>, <code>RFM</code>), genre, or country</li>
+          <li class="pt" hidden>Pesquisa por nome (ex: <code>Comercial</code>, <code>RFM</code>), género ou país</li>
+          <li class="en">Pagination support for large result sets</li>
+          <li class="pt" hidden>Suporte a paginação para resultados extensos</li>
+          <li class="en">Duplicate detection — stations are never added twice</li>
+          <li class="pt" hidden>Deteção de duplicados — estações nunca são adicionadas duas vezes</li>
+        </ul>
+<pre><code><span class="cm"># Create venv and install deps</span>
+python3 -m venv venv
+source venv/bin/activate
+pip install requests
+
+<span class="cm"># Run</span>
+python3 navidrome-radio.py</code></pre>
+      </div>
+
+      <div class="doc-block" id="d-proxy">
+        <h3>🌐 <span class="en">Reverse Proxy</span><span class="pt" hidden>Reverse Proxy</span></h3>
+        <p class="en">Required for secure WAN access (HTTPS). Choose based on your preference:</p>
+        <p class="pt" hidden>Necessário para acesso HTTPS seguro à Internet. Escolhe consoante a tua preferência:</p>
+        <div class="proxy-row">
+          <a class="proxy-card" href="https://nginxproxymanager.com/" target="_blank">
+            <div class="proxy-name">Nginx Proxy Manager</div>
+            <div class="proxy-desc en">GUI-based · Let's Encrypt built-in · easiest to start with</div>
+            <div class="proxy-desc pt" hidden>Interface gráfica · Let's Encrypt integrado · mais fácil de começar</div>
+          </a>
+          <a class="proxy-card" href="https://traefik.io/" target="_blank">
+            <div class="proxy-name">Traefik</div>
+            <div class="proxy-desc en">Docker label config · great for power users</div>
+            <div class="proxy-desc pt" hidden>Config via labels Docker · ideal para utilizadores avançados</div>
+          </a>
+          <a class="proxy-card" href="https://caddyserver.com/" target="_blank">
+            <div class="proxy-name">Caddy</div>
+            <div class="proxy-desc en">Minimal config · automatic HTTPS by default</div>
+            <div class="proxy-desc pt" hidden>Config mínima · HTTPS automático por defeito</div>
+          </a>
+        </div>
+      </div>
+
+    </div><!-- /docs-sections -->
+  </div><!-- /docs-wrap -->
+</div><!-- /section-wrap -->
+
+<div class="divider"></div>
+
+<!-- FOOTER -->
+<footer>
+  <span>
+    <a href="https://github.com/mefrraz/selfhosted-stack-music" target="_blank">mefrraz/selfhosted-stack-music</a>
+    &nbsp;·&nbsp; MIT License
+  </span>
+  <div class="footer-links">
+    <a href="https://github.com/navidrome/navidrome" target="_blank">Navidrome ↗</a>
+    <a href="https://github.com/bambanah/deemix" target="_blank">Deemix ↗</a>
+    <a href="https://github.com/tranxuanthang/lrcget" target="_blank">LRCGET ↗</a>
+    <a href="https://lrclib.net" target="_blank">LRCLIB ↗</a>
+    <a href="https://www.radio-browser.info/" target="_blank">Radio-Browser ↗</a>
+  </div>
+</footer>
+
+<script>
+  // Language toggle
+  function setLang(lang) {
+    document.querySelectorAll('.en').forEach(el => el.hidden = lang !== 'en');
+    document.querySelectorAll('.pt').forEach(el => el.hidden = lang !== 'pt');
+    document.querySelectorAll('.lbtn').forEach(b => b.classList.remove('on'));
+    document.querySelector(`.lbtn[onclick="setLang('${lang}')"]`).classList.add('on');
+  }
+
+  // Active sidebar highlight on scroll
+  const blocks = document.querySelectorAll('.doc-block');
+  const navAs  = document.querySelectorAll('.docs-sidebar a');
+
+  new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navAs.forEach(a => a.classList.remove('active'));
+        const a = document.querySelector(`.docs-sidebar a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-15% 0px -75% 0px' }).observe
+    ? blocks.forEach(b => new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            navAs.forEach(a => a.classList.remove('active'));
+            const a = document.querySelector(`.docs-sidebar a[href="#${e.target.id}"]`);
+            if (a) a.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-15% 0px -75% 0px' }).observe(b))
+    : null;
+</script>
+
+</body>
+</html>
